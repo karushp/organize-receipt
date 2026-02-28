@@ -18,7 +18,7 @@ A Streamlit web application for recording and organizing expenses and receipts w
 organize-receipt/
 ├── app.py                 # Main Streamlit application entry point
 ├── config.py             # User and category configuration
-├── requirements.txt      # Python dependencies
+├── pyproject.toml        # Project config & dependencies (uv)
 ├── components/           # UI components
 │   ├── capture_form.py   # Receipt capture form
 │   ├── transactions_table.py  # Expense transactions display
@@ -34,6 +34,16 @@ organize-receipt/
 │   └── image_utils.py    # Image processing utilities
 └── streamlit/            # Streamlit configuration
     └── secrets.toml      # API secrets and credentials
+```
+
+## Getting Started
+
+Requires [uv](https://docs.astral.sh/uv/) for dependency management.
+
+```bash
+# Install dependencies and run the app
+uv sync
+uv run streamlit run app.py
 ```
 
 ## Technologies
