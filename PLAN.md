@@ -37,7 +37,7 @@ A Streamlit application for recording and organizing expenses with receipt image
 - [x] Implement delete functionality (remove from Sheets AND Drive)
 
 ### Step 6: Testing & Configuration
-- [x] Set up `requirements.txt` with all dependencies
+- [x] Set up `pyproject.toml` and uv for dependencies
 - [x] Configure `.streamlit/secrets.toml` with Google API credentials (see `.streamlit/secrets.toml.example`)
 - [ ] Test complete flow: capture → upload → display → delete
 
