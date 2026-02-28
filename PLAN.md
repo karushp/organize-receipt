@@ -8,37 +8,37 @@ A Streamlit application for recording and organizing expenses with receipt image
 ## Phase 1: Receipt Capture & Storage
 
 ### Step 1: Core Services Setup
-- [ ] Implement `auth_service.py` - Google OAuth authentication
-- [ ] Implement `sheets_service.py` - Google Sheets API integration
-- [ ] Implement `drive_service.py` - Google Drive API integration
-- [ ] Implement `pdf_service.py` - PDF/image processing utilities
+- [x] Implement `auth_service.py` - Google service account authentication
+- [x] Implement `sheets_service.py` - Google Sheets API integration
+- [x] Implement `drive_service.py` - Google Drive API integration
+- [x] Implement `pdf_service.py` - PDF/image processing utilities
 
 ### Step 2: Utility Functions
-- [ ] Implement `date_utils.py` - Date parsing and formatting
-- [ ] Implement `id_utils.py` - Generate unique IDs for receipts
-- [ ] Implement `image_utils.py` - Image processing and validation
+- [x] Implement `date_utils.py` - Date parsing and formatting
+- [x] Implement `id_utils.py` - Generate unique IDs for receipts
+- [x] Implement `image_utils.py` - Image processing and validation
 
 ### Step 3: UI Components
-- [ ] Implement `capture_form.py` - Form for capturing receipt details (date, item, category, amount, image upload)
-- [ ] Implement `transactions_table.py` - Table display of all transactions with edit/delete options
-- [ ] Implement `print_section.py` - Basic UI layout for Phase 2
+- [x] Implement `capture_form.py` - Form for capturing receipt details (date, item, category, amount, image upload)
+- [x] Implement `transactions_table.py` - Table display of all transactions with edit/delete options
+- [x] Implement `print_section.py` - Basic UI layout for Phase 2
 
 ### Step 4: Main Application
-- [ ] Implement `app.py` - Main Streamlit app with:
+- [x] Implement `app.py` - Main Streamlit app with:
   - User selection dropdown
   - Receipt capture form
   - Transactions table display
   - Delete functionality
 
 ### Step 5: Data Flow Implementation
-- [ ] Upload receipt image to Google Drive
-- [ ] Extract image file ID and store in Google Sheets row
-- [ ] Link transactions in Sheets to receipt images in Drive
-- [ ] Implement delete functionality (remove from Sheets AND Drive)
+- [x] Upload receipt image to Google Drive
+- [x] Extract image file ID and store in Google Sheets row
+- [x] Link transactions in Sheets to receipt images in Drive
+- [x] Implement delete functionality (remove from Sheets AND Drive)
 
 ### Step 6: Testing & Configuration
-- [ ] Set up `requirements.txt` with all dependencies
-- [ ] Configure `streamlit/secrets.toml` with Google API credentials
+- [x] Set up `requirements.txt` with all dependencies
+- [x] Configure `.streamlit/secrets.toml` with Google API credentials (see `.streamlit/secrets.toml.example`)
 - [ ] Test complete flow: capture → upload → display → delete
 
 ---
@@ -62,8 +62,8 @@ A Streamlit application for recording and organizing expenses with receipt image
 
 ## Progress Tracking
 
-**Current Status:** Planning phase
-**Phase 1 Completion:** 0%
+**Current Status:** Phase 1 implemented
+**Phase 1 Completion:** ~95% (pending credentials setup and end-to-end test)
 **Phase 2 Completion:** 0%
 
 > Update this section as work progresses
