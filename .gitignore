@@ -1,0 +1,22 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Streamlit secrets (keep example, ignore actual)
+.streamlit/secrets.toml
+
+# OS
+.DS_Store
+Thumbs.db
