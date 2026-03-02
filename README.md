@@ -7,7 +7,7 @@ A Streamlit web application for recording and organizing expenses and receipts w
 - **Multi-user support** - Manage expenses for multiple users
 - **Google Sheets integration** - Store expense data in Google Sheets
 - **Google Drive integration** - Store and manage receipt files in Google Drive
-- **Receipt capture** - Capture and process receipt images/PDFs
+- **Receipt capture** - Take photos with camera (mobile-friendly) or upload images/PDFs
 - **Transaction tracking** - View and manage all transactions in a table format
 - **Expense categories** - Organize expenses by category (Food, Transportation, Entertainment, Utilities, Shopping)
 - **Print functionality** - Generate printable expense reports
@@ -39,6 +39,8 @@ organize-receipt/
 ## Getting Started
 
 Requires [uv](https://docs.astral.sh/uv/) for dependency management.
+
+**Mobile:** Camera capture works on phones when served over HTTPS (e.g. Streamlit Cloud). Browsers require a secure context for camera access.
 
 ```bash
 # Install dependencies and run the app
