@@ -35,3 +35,11 @@ def get_credentials() -> Credentials:
         "No Google credentials found. Configure .streamlit/secrets.toml with "
         "gcp_service_account or set GOOGLE_APPLICATION_CREDENTIALS to a JSON key file."
     )
+
+
+def get_credentials_or_none() -> Credentials | None:
+    """Get credentials if available, otherwise return None (for demo mode)."""
+    try:
+        return get_credentials()
+    except RuntimeError:
+        return None
