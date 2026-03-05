@@ -17,6 +17,9 @@ env/
 # Streamlit secrets (keep example, ignore actual)
 .streamlit/secrets.toml
 
+# Private credentials (key file goes here)
+private/
+
 # OS
 .DS_Store
 Thumbs.db
