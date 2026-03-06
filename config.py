@@ -1,23 +1,19 @@
+import os
+
+# Users: comma-separated in .env (e.g. USERS=KP,ASB). Per-user: {USER}_SHEET_ID, {USER}_DRIVE_FOLDER_ID
+_users_raw = os.environ.get("USERS", "")
+USERS = [u.strip() for u in _users_raw.split(",") if u.strip()]
+
 USER_CONFIG = {
-    "KP": {
-        "sheet_id": "1a2b3c4d5e6f7g8h9i0j",
-        "drive_folder_id": "0a1b2c3d4e5f6g7h8i9j"
-    },
-    "ASB": {
-        "sheet_id": "9i8h7g6f5e4d32a1b0c",
-        "drive_folder_id": "9j8i7h6f5e4d3c2b1a"
+    user: {
+        "sheet_id": os.environ.get(f"{user}_SHEET_ID", ""),
+        "drive_folder_id": os.environ.get(f"{user}_DRIVE_FOLDER_ID", ""),
     }
+    for user in USERS
 }
 
-USERS = [
-    "KP",
-    "ASB"
-]
-
-CATEGORIES = [
-    "Food",
-    "Transportation",
-    "Entertainment",
-    "Utilities",
-    "Shopping"
-]
+# Categories: comma-separated in .env (e.g. CATEGORIES=Food,Transportation,...)
+_categories_raw = os.environ.get("CATEGORIES", "")
+CATEGORIES = [c.strip() for c in _categories_raw.split(",") if c.strip()]
+if not CATEGORIES:
+    CATEGORIES = ["Uncategorized"]
