@@ -8,6 +8,7 @@ USER_CONFIG = {
     user: {
         "sheet_id": os.environ.get(f"{user}_SHEET_ID", ""),
         "drive_folder_id": os.environ.get(f"{user}_DRIVE_FOLDER_ID", ""),
+        "email": os.environ.get(f"{user}_EMAIL", "").strip(),
     }
     for user in USERS
 }

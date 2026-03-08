@@ -13,6 +13,7 @@ PENDING_RECEIPT_KEY = "capture_form_pending_receipt"
 SHOW_CAMERA_KEY = "capture_form_show_camera"
 RETAINED_FORM_KEY = "capture_form_retained"
 RETAINED_ERROR_KEY = "capture_form_retained_error"
+SUCCESS_MESSAGE_KEY = "capture_form_show_success"
 
 
 def _get_pending_receipt():
@@ -165,71 +166,84 @@ def render_capture_form(on_submit):
             default_item = retained.get("item", "") if retained else ""
             item = st.text_input("Item", value=default_item, placeholder="e.g. Groceries at Store")
         with col4:
-            default_category = retained.get("category", CATEGORIES[0]) if retained else CATEGORIES[0]
+            first_category = CATEGORIES[0] if CATEGORIES else "Uncategorized"
+            default_category = retained.get("category", first_category) if retained else first_category
             cat_index = CATEGORIES.index(default_category) if default_category in CATEGORIES else 0
             category = st.selectbox("Category", options=CATEGORIES, index=cat_index)
 
         submitted = st.form_submit_button("Save Receipt")
 
         if submitted:
-            # Validate date
-            if date_value is None:
-                _retain_form_values(date_value, amount, item, category)
-                st.error("Please select a date.")
-                st.rerun()
-                return
-            formatted_date = date_value.strftime("%Y-%m-%d")
-
-            # Validate item
-            if not item or not item.strip():
-                _retain_form_values(date_value, amount, item, category)
-                st.error("Please enter an item description.")
-                st.rerun()
-                return
-
-            # Validate amount
-            if amount is None or amount < 0:
-                _retain_form_values(date_value, amount, item, category)
-                st.error("Please enter a valid amount.")
-                st.rerun()
-                return
-
-            # Validate image (required)
-            image_bytes, filename = _get_pending_receipt()
-            if not image_bytes or not filename:
-                _retain_form_values(date_value, amount, item, category)
-                _retain_error("Need a photo mate 📷 — add a receipt image to save.")
-                st.rerun()
-                return
-            if not is_supported_receipt_file(filename):
-                _retain_form_values(date_value, amount, item, category)
-                st.error("Unsupported file type. Use JPG, PNG, GIF, WebP, or PDF.")
-                st.rerun()
-                return
-            if not filename.lower().endswith(".pdf"):
-                is_valid, err = validate_image_file(image_bytes, filename)
-                if not is_valid:
+            with st.spinner("Saving…"):
+                # Validate date
+                if date_value is None:
                     _retain_form_values(date_value, amount, item, category)
-                    st.error(err)
+                    st.error("Please select a date.")
+                    st.rerun()
+                    return
+                formatted_date = date_value.strftime("%Y-%m-%d")
+
+                # Validate item
+                if not item or not item.strip():
+                    _retain_form_values(date_value, amount, item, category)
+                    st.error("Please enter an item description.")
                     st.rerun()
                     return
 
-            transaction = {
-                "id": generate_receipt_id(),
-                "date": formatted_date,
-                "item": item.strip(),
-                "category": category,
-                "amount": amount,
-                "drive_file_id": "",
-            }
+                # Validate amount
+                if amount is None or amount < 0:
+                    _retain_form_values(date_value, amount, item, category)
+                    st.error("Please enter a valid amount.")
+                    st.rerun()
+                    return
 
-            try:
-                on_submit(transaction, image_bytes, filename)
-                _clear_pending_receipt()
-                _clear_retained_form()
-                st.success("Receipt saved successfully!")
-                st.rerun()
-            except Exception as e:
-                _retain_form_values(date_value, amount, item, category)
-                st.error(f"Failed to save: {e}")
-                st.rerun()
+                # Validate image (required)
+                image_bytes, filename = _get_pending_receipt()
+                if not image_bytes or not filename:
+                    _retain_form_values(date_value, amount, item, category)
+                    _retain_error("Need a photo mate 📷 — add a receipt image to save.")
+                    st.error("Add a receipt image first (📷 Take Photo or 📁 Upload File above), then click Save again.")
+                    st.rerun()
+                    return
+                if not is_supported_receipt_file(filename):
+                    _retain_form_values(date_value, amount, item, category)
+                    st.error("Unsupported file type. Use JPG, PNG, GIF, WebP, or PDF.")
+                    st.rerun()
+                    return
+                if not filename.lower().endswith(".pdf"):
+                    is_valid, err = validate_image_file(image_bytes, filename)
+                    if not is_valid:
+                        _retain_form_values(date_value, amount, item, category)
+                        st.error(err)
+                        st.rerun()
+                        return
+
+                transaction = {
+                    "id": generate_receipt_id(),
+                    "date": formatted_date,
+                    "item": item.strip(),
+                    "category": category,
+                    "amount": amount,
+                    "drive_file_id": "",
+                }
+
+                try:
+                    on_submit(transaction, image_bytes, filename)
+                    _clear_pending_receipt()
+                    _clear_retained_form()
+                    st.session_state[SUCCESS_MESSAGE_KEY] = True
+                    st.rerun()
+                except Exception as e:
+                    _retain_form_values(date_value, amount, item, category)
+                    err_msg = str(e)
+                    if "404" in err_msg and "drive" in err_msg.lower():
+                        _retain_error(
+                            "Drive folder not found. Check your ..._DRIVE_FOLDER_ID in .env: use a real folder ID from the Drive URL and share that folder with your service account (Editor)."
+                        )
+                    elif "403" in err_msg and "storageQuotaExceeded" in err_msg:
+                        _retain_error(
+                            "Drive upload failed: service account has no storage. Set your ..._EMAIL in .env (e.g. KP_EMAIL=you@gmail.com) so receipts go to the app’s Drive and are shared with you. Or use a Shared Drive (Workspace) and ..._DRIVE_FOLDER_ID."
+                        )
+                    else:
+                        _retain_error(f"Failed to save: {e}")
+                    st.rerun()

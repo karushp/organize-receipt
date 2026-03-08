@@ -3,8 +3,6 @@
 from googleapiclient.discovery import build
 from google.auth.credentials import Credentials
 
-from config import USER_CONFIG
-
 SHEET_NAME = "Transactions"
 HEADERS = ["id", "date", "item", "category", "amount", "drive_file_id"]
 
