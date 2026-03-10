@@ -40,7 +40,7 @@ From the **supabase** directory:
 python scripts/sync_to_sheets.py
 ```
 
-Uses `GOOGLE_SHEETS_ID` (spreadsheet ID from the URL) and `GOOGLE_SERVICE_ACCOUNT_JSON` (path to service account key). Creates tabs **KP** and **User2** and fills them with `date | category | amount | note | receipt_url`.
+Uses `GOOGLE_SHEETS_ID` (spreadsheet ID from the URL) and `GOOGLE_SERVICE_ACCOUNT_JSON` (path to service account key). Creates one tab per user (from `USERS`) and fills them with `date | category | amount | description | created_date | receipt_url`.
 
 Optional cron (e.g. monthly on the 1st at 2:00):
 
