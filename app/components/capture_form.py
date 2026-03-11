@@ -112,8 +112,12 @@ def render_capture_form(categories, on_submit, current_user: str):
     retained = _get_retained_form_values()
     _show_retained_error()
 
+    CATEGORY_PLACEHOLDER = "Select one"
+    category_options = [CATEGORY_PLACEHOLDER] + (categories or ["Other"])
+
     with st.form("capture_form", clear_on_submit=True):
-        col1, col2, col3, col4 = st.columns(4)
+        # Date | Amount (narrow) | Description (wide) | Category (wider)
+        col1, col2, col3, col4 = st.columns([1.2, 1, 2.2, 1.8])
 
         with col1:
             default_date = date.today()
@@ -142,10 +146,12 @@ def render_capture_form(categories, on_submit, current_user: str):
             description = st.text_input("Description", value=default_desc, placeholder="e.g. Shimamura clothes shopping")
 
         with col4:
-            first_cat = categories[0] if categories else "Other"
-            default_cat = (retained or {}).get("category", first_cat)
-            cat_index = categories.index(default_cat) if default_cat in categories else 0
-            category = st.selectbox("Category", options=categories, index=cat_index)
+            default_cat = (retained or {}).get("category", "")
+            if default_cat and default_cat in categories:
+                cat_index = category_options.index(default_cat)  # 1-based in options
+            else:
+                cat_index = 0  # "Select one"
+            category = st.selectbox("Category (required)", options=category_options, index=cat_index)
 
         bypass_receipt = st.checkbox("Save without receipt image", key="bypass_receipt", help="Save the entry with no photo.")
 
@@ -153,13 +159,18 @@ def render_capture_form(categories, on_submit, current_user: str):
 
         if submitted:
             if date_value is None:
-                _retain_form_values(date_value, amount, description, category)
+                _retain_form_values(date_value, amount, description, category if category != CATEGORY_PLACEHOLDER else "")
                 st.error("Please select a date.")
                 st.rerun()
                 return
             if amount is None or amount < 0:
-                _retain_form_values(date_value, amount, description, category)
+                _retain_form_values(date_value, amount, description, category if category != CATEGORY_PLACEHOLDER else "")
                 st.error("Please enter a valid amount.")
+                st.rerun()
+                return
+            if category == CATEGORY_PLACEHOLDER or not category:
+                _retain_form_values(date_value, amount, description, "")
+                _retain_error("Please select a category.")
                 st.rerun()
                 return
 

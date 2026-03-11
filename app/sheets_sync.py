@@ -8,6 +8,11 @@ from pathlib import Path
 HEADERS = ["date", "category", "amount", "description", "created_date", "receipt_url"]
 
 
+def _row_for_sheet(transaction: dict) -> list:
+    """Build a sheet row from a transaction dict using HEADERS order."""
+    return [str(transaction.get(h, "")) for h in HEADERS]
+
+
 def _get_sheets_client():
     try:
         import gspread
@@ -15,12 +20,12 @@ def _get_sheets_client():
     except ImportError:
         raise RuntimeError("Install gspread and google-auth: pip install gspread google-auth")
 
-    root = Path(__file__).resolve().parent.parent
+    from app.config import ROOT
     raw = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON", "").strip()
     # Try absolute/user path first, then relative to project root
     for candidate in [
         (Path(raw).expanduser() if raw else None),
-        (root / raw) if raw else (root / "private" / "credentials.json"),
+        (ROOT / raw) if raw else (ROOT / "private" / "credentials.json"),
     ]:
         if candidate and candidate.is_file():
             creds_path = str(candidate.resolve())
@@ -82,13 +87,9 @@ def run_sync():
                 ws = sh.add_worksheet(title=title, rows=1000, cols=10)
             # Always clear first so deleted transactions disappear from the sheet
             ws.clear()
-            if not user_rows:
-                ws.update("A1:F1", [HEADERS])
-            else:
-                data = [[str(r.get("date", "")), str(r.get("category", "")), str(r.get("amount", "")), str(r.get("description", "")), str(r.get("created_date", "")), str(r.get("receipt_url", ""))] for r in user_rows]
-                ws.update("A1", [HEADERS] + data)
+            data = [_row_for_sheet(r) for r in user_rows]
+            ws.update("A1", [HEADERS] + data)
     except Exception as e:
         return False, str(e)
 
-    total = sum(len([t for t in all_tx if t.get("user") == u]) for u in USERS)
     return True, f"Synced {len(all_tx)} transactions to tabs: {', '.join(SHEET_TAB_NAMES.get(u, u) for u in USERS)}."

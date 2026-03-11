@@ -9,15 +9,6 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-try:
-    from dotenv import load_dotenv
-    # Load from project root .env first; then cwd
-    load_dotenv(ROOT / ".env")
-    load_dotenv()
-except ImportError:
-    pass
-
-import json
 from datetime import date
 from io import BytesIO
 
@@ -26,7 +17,7 @@ import httpx
 
 from app.supabase_client import get_client
 from app import upload_receipt, transactions
-from app.config import USERS
+from app.config import USERS, load_categories, DEFAULT_CURRENCY
 from app.auth import auth_enabled, check_login, is_super_user, get_data_user_for_login
 from app.components.capture_form import render_capture_form, SUCCESS_MESSAGE_KEY
 from app.components.transactions_table import render_transactions_table
@@ -34,9 +25,7 @@ from app.components.print_section import render_print_section
 from app.sheets_sync import run_sync as run_sheets_sync
 from utils import pdf_export
 
-CATEGORIES_PATH = ROOT / "config" / "categories.json"
-with open(CATEGORIES_PATH) as f:
-    CATEGORIES = json.load(f)
+CATEGORIES = load_categories()
 
 st.set_page_config(
     page_title="Receipt Tracker",
@@ -67,13 +56,7 @@ def _handle_submit(transaction_dict, image_bytes, filename):
     user = transaction_dict["user"]
     receipt_url = None
     if image_bytes and filename:
-        content_type = "image/jpeg"
-        if filename.lower().endswith(".png"):
-            content_type = "image/png"
-        elif filename.lower().endswith(".webp"):
-            content_type = "image/webp"
-        elif filename.lower().endswith(".heic"):
-            content_type = "image/heic"
+        content_type = upload_receipt.content_type_for_filename(filename)
         receipt_url = upload_receipt.upload_image(user, image_bytes, content_type)
     upload_receipt.insert_transaction(
         date_val=date.fromisoformat(transaction_dict["date"]),
@@ -205,7 +188,7 @@ def main():
         st.stop()
 
     delete_callback = (lambda tid: _handle_delete(tid, allowed_user=selected_user)) if only_my_data else _handle_delete
-    render_transactions_table(all_tx, delete_callback, currency="$")
+    render_transactions_table(all_tx, delete_callback, currency=DEFAULT_CURRENCY)
     st.divider()
 
     if only_my_data:
@@ -222,7 +205,7 @@ def main():
         pdf_export.generate_receipts_pdf(rows, output_buffer=buf, receipts_per_page=4)
         return buf.getvalue()
 
-    render_print_section(_transactions_for_print, report_users, _make_pdf, currency="$")
+    render_print_section(_transactions_for_print, report_users, _make_pdf, currency=DEFAULT_CURRENCY)
 
 
 if __name__ == "__main__":

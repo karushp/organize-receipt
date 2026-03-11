@@ -1,7 +1,7 @@
 """CRUD for transactions table."""
-from datetime import date
+from datetime import date, timedelta
 
-from app.supabase_client import get_client
+from app.supabase_client import get_client, first_row
 from app.upload_receipt import _amount_for_db
 
 
@@ -23,9 +23,7 @@ def get_transactions_filtered(month: date | None = None, user: str | None = None
         if month.month == 12:
             end = date(month.year, 12, 31)
         else:
-            end = date(month.year, month.month + 1, 1)
-        from datetime import timedelta
-        end = end - timedelta(days=1)
+            end = date(month.year, month.month + 1, 1) - timedelta(days=1)
         q = q.gte("date", start.isoformat()).lte("date", end.isoformat())
     q = q.order("date", desc=True)
     resp = q.execute()
@@ -57,18 +55,14 @@ def update_transaction(
     if not payload:
         return get_transaction_by_id(id)
     resp = client.table("transactions").update(payload).eq("id", id).execute()
-    if not resp.data or len(resp.data) == 0:
-        raise RuntimeError("Update failed: no data returned")
-    return resp.data[0]
+    return first_row(resp, or_raise=True)
 
 
 def get_transaction_by_id(id: str) -> dict | None:
     """Get a single transaction by id."""
     client = get_client()
     resp = client.table("transactions").select("*").eq("id", id).execute()
-    if not resp.data or len(resp.data) == 0:
-        return None
-    return resp.data[0]
+    return first_row(resp)
 
 
 def delete_transaction(id: str) -> None:

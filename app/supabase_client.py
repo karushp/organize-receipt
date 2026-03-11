@@ -1,6 +1,5 @@
 """Supabase client singleton for the receipt tracker."""
 import os
-from pathlib import Path
 
 from supabase import create_client, Client
 
@@ -8,15 +7,9 @@ _client: Client | None = None
 
 
 def _ensure_env_loaded():
-    """Load .env from project root so credentials are always read from file when client is created."""
-    try:
-        from dotenv import load_dotenv
-        env_path = Path(__file__).resolve().parent.parent / ".env"
-        load_dotenv(env_path, override=False)  # don't override if already set (e.g. by deployment)
-        if not os.environ.get("SUPABASE_URL"):
-            load_dotenv()  # fallback: cwd .env
-    except ImportError:
-        pass
+    """Load .env from project root so credentials are available when client is created."""
+    from app.config import ensure_env_loaded
+    ensure_env_loaded()
 
 
 def get_client() -> Client:
@@ -38,3 +31,16 @@ def get_client() -> Client:
 
         _client = create_client(url, key)
     return _client
+
+
+def first_row(resp, *, or_raise: bool = False):
+    """
+    Return the first row from a Supabase select/insert/update response, or None if empty.
+    If or_raise=True, raise RuntimeError when no row is returned.
+    """
+    data = getattr(resp, "data", None) or []
+    if not data:
+        if or_raise:
+            raise RuntimeError("No data returned")
+        return None
+    return data[0]

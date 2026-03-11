@@ -4,10 +4,22 @@ from pathlib import Path
 from uuid import uuid4
 from datetime import date
 
-from app.supabase_client import get_client
+from app.supabase_client import get_client, first_row
 
 
 BUCKET = "receipts"
+
+
+def content_type_for_filename(filename: str) -> str:
+    """Return a suitable content-type for upload from filename extension."""
+    lower = (filename or "").lower()
+    if lower.endswith(".png"):
+        return "image/png"
+    if lower.endswith(".webp"):
+        return "image/webp"
+    if lower.endswith(".heic"):
+        return "image/heic"
+    return "image/jpeg"
 
 
 def _user_folder(user: str) -> str:
@@ -67,6 +79,4 @@ def insert_transaction(
         "created_date": today,
     }
     resp = client.table("transactions").insert(row).execute()
-    if not resp.data or len(resp.data) == 0:
-        raise RuntimeError("Insert failed: no data returned")
-    return resp.data[0]
+    return first_row(resp, or_raise=True)
