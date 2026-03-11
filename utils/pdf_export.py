@@ -3,7 +3,7 @@ from datetime import date
 from pathlib import Path
 import sys
 
-# Allow running from supabase/ with utils on path
+# Allow running from project root with utils on path
 _ROOT = Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))

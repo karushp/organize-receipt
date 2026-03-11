@@ -19,11 +19,9 @@ env/
 
 # Private credentials (key file goes here)
 private/
-g-doc/private/
 
 # Local env (secrets and config – copy .env.example to .env and fill in)
 .env
-g-doc/.env
 
 # OS
 .DS_Store

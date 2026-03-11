@@ -17,7 +17,7 @@ def _get_sheets_client():
 
     root = Path(__file__).resolve().parent.parent
     raw = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON", "").strip()
-    # Try absolute/user path first, then relative to supabase/
+    # Try absolute/user path first, then relative to project root
     for candidate in [
         (Path(raw).expanduser() if raw else None),
         (root / raw) if raw else (root / "private" / "credentials.json"),

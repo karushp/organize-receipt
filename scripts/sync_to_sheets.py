@@ -1,6 +1,6 @@
 """
 Sync transactions from Supabase to Google Sheets (one tab per user).
-Run from supabase/: uv run python scripts/sync_to_sheets.py
+Run from project root: uv run python scripts/sync_to_sheets.py
 Requires in .env: GOOGLE_SHEETS_ID, GOOGLE_SERVICE_ACCOUNT_JSON
 """
 import sys

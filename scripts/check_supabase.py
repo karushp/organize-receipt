@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test Supabase setup. Run from supabase/: uv run python scripts/check_supabase.py
+Test Supabase setup. Run from project root: uv run python scripts/check_supabase.py
 Optional: uv run python scripts/check_supabase.py --full  (also tests insert + storage)
 """
 import sys
@@ -50,8 +50,8 @@ def main():
         err = str(e)
         if "PGRST205" in err or "schema cache" in err or "not find the table" in err:
             print("   FAIL: Table 'transactions' not found. Run migrations:")
-            print("      supabase/migrations/20250308000001_create_transactions_table.sql")
-            print("      supabase/migrations/20250308000002_storage_receipts_bucket.sql")
+            print("      migrations/20250308000001_create_transactions_table.sql")
+            print("      migrations/20250308000002_storage_receipts_bucket.sql")
             ok = False
         else:
             print(f"   FAIL: {e}")
@@ -71,7 +71,7 @@ def main():
             err = str(e)
             if "Bucket not found" in err or "404" in err or "not find" in err.lower():
                 print("   FAIL: Bucket missing. Run migration:")
-                print("      supabase/migrations/20250308000002_storage_receipts_bucket.sql")
+                print("      migrations/20250308000002_storage_receipts_bucket.sql")
             else:
                 print(f"   WARN: {e}")
     print()

@@ -8,7 +8,7 @@ _client: Client | None = None
 
 
 def _ensure_env_loaded():
-    """Load .env from supabase/ so credentials are always read from file when client is created."""
+    """Load .env from project root so credentials are always read from file when client is created."""
     try:
         from dotenv import load_dotenv
         env_path = Path(__file__).resolve().parent.parent / ".env"
@@ -30,8 +30,7 @@ def get_client() -> Client:
         if not url or not key:
             raise RuntimeError(
                 "SUPABASE_URL and SUPABASE_KEY must be set. "
-                "Add them to supabase/.env and run from the supabase directory: "
-                "cd supabase && uv run streamlit run app/streamlit_app.py"
+                "Add them to .env in the project root and run: uv run streamlit run app/streamlit_app.py"
             )
 
         if not url.startswith(("http://", "https://")):

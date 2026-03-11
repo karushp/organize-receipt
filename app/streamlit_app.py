@@ -1,6 +1,6 @@
 """
 Receipt Capture & Expense Tracker – Streamlit app (single dashboard, same layout as g-doc).
-Run from supabase/: streamlit run app/streamlit_app.py
+Run from project root: streamlit run app/streamlit_app.py
 """
 import sys
 from pathlib import Path
@@ -11,7 +11,7 @@ if str(ROOT) not in sys.path:
 
 try:
     from dotenv import load_dotenv
-    # Load from supabase/.env first; then cwd (so "streamlit run" from repo root still finds .env)
+    # Load from project root .env first; then cwd
     load_dotenv(ROOT / ".env")
     load_dotenv()
 except ImportError:
@@ -198,9 +198,9 @@ def main():
             all_tx = transactions.get_all_transactions()
     except httpx.ConnectError as e:
         st.error(
-            "**Cannot reach Supabase.** Check that `SUPABASE_URL` in `supabase/.env` is correct "
+            "**Cannot reach Supabase.** Check that `SUPABASE_URL` in `.env` is correct "
             "(e.g. `https://your-project.supabase.co` with no trailing slash) and you have network access. "
-            "Run the app from the supabase directory: `cd supabase && uv run streamlit run app/streamlit_app.py`"
+            "Run from project root: `uv run streamlit run app/streamlit_app.py`"
         )
         st.stop()
 
