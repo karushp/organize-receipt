@@ -250,6 +250,18 @@ Supabase free tier is sufficient.
 
 ---
 
+# Planned Phases
+
+### Phase: PDF Print streamline
+- **Statement in table** – Print transaction list (statement) in table form in the PDF.
+- **Receipts in table** – Option to include receipt images in the same table (e.g. one row per transaction with thumbnail or image cell).
+- **No receipt** – Option to generate PDF with statement/table only, without embedding receipt images.
+
+### Phase: Capture enhancement
+- **Auto crop with receipt edges** – Detect receipt boundaries in the captured/uploaded image and auto-crop to the receipt edges (e.g. document scanning style) before saving or displaying.
+
+---
+
 # Future Improvements
 
 ### AI Receipt Parsing
