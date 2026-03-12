@@ -54,10 +54,13 @@ def _ensure_supabase():
 def _handle_submit(transaction_dict, image_bytes, filename):
     """Upload image to Supabase Storage (if provided) and insert transaction."""
     user = transaction_dict["user"]
+    transaction_date = date.fromisoformat(transaction_dict["date"])
     receipt_url = None
     if image_bytes and filename:
         content_type = upload_receipt.content_type_for_filename(filename)
-        receipt_url = upload_receipt.upload_image(user, image_bytes, content_type)
+        receipt_url = upload_receipt.upload_image(
+            user, image_bytes, content_type, transaction_date=transaction_date
+        )
     upload_receipt.insert_transaction(
         date_val=date.fromisoformat(transaction_dict["date"]),
         user=user,
@@ -200,12 +203,31 @@ def main():
             return transactions.get_transactions_filtered(month=month_date, user=user_or_none)
         report_users = USERS
 
-    def _make_pdf(rows):
+    def _make_pdf(rows, include_receipts=True, include_statement=True, month_label="", user_name=""):
         buf = BytesIO()
-        pdf_export.generate_receipts_pdf(rows, output_buffer=buf, receipts_per_page=4)
+        try:
+            pdf_export.generate_receipts_pdf(
+                rows,
+                output_buffer=buf,
+                receipts_per_page=4,
+                currency=DEFAULT_CURRENCY,
+                include_receipts=include_receipts,
+                include_statement=include_statement,
+                statement_month_label=month_label,
+                statement_user_name=user_name,
+            )
+        except TypeError:
+            pdf_export.generate_receipts_pdf(rows, output_buffer=buf, receipts_per_page=4)
         return buf.getvalue()
 
-    render_print_section(_transactions_for_print, report_users, _make_pdf, currency=DEFAULT_CURRENCY)
+    render_print_section(
+        _transactions_for_print,
+        report_users,
+        _make_pdf,
+        currency=DEFAULT_CURRENCY,
+        show_user_filter=not only_my_data,
+        current_user=selected_user,
+    )
 
 
 if __name__ == "__main__":

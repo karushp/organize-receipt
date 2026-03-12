@@ -43,8 +43,8 @@ for pair in _user_map_raw.split(","):
         auth_u, data_u = pair.split(":", 1)
         USER_DATA_MAP[auth_u.strip()] = data_u.strip()
 
-# Display
-DEFAULT_CURRENCY = "$"
+# Display (e.g. set DEFAULT_CURRENCY=¥ or DEFAULT_CURRENCY=$ in .env)
+DEFAULT_CURRENCY = os.environ.get("DEFAULT_CURRENCY", "¥")
 
 
 def load_categories() -> list:

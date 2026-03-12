@@ -27,17 +27,39 @@ def _user_folder(user: str) -> str:
     return f"{user.strip()}/"
 
 
-def upload_image(user: str, file_bytes: bytes, content_type: str) -> str:
+def _next_receipt_number_for_user_date(user: str, transaction_date: date) -> int:
+    """Return next incremental number (1-based) for receipts for this user on this date."""
+    client = get_client()
+    date_iso = transaction_date.isoformat()
+    resp = client.table("transactions").select("id").eq("user", user.strip()).eq("date", date_iso).execute()
+    count = len(resp.data or [])
+    return count + 1
+
+
+def upload_image(
+    user: str,
+    file_bytes: bytes,
+    content_type: str,
+    transaction_date: date | None = None,
+) -> str:
     """
     Upload receipt image to Storage and return public URL.
-    Path: receipts/{user}/{uuid}.{ext}
+    Path: receipts/{user}/{user}-{MMDDYY}-{seq:03d}.{ext} when transaction_date is set,
+    else receipts/{user}/{uuid}.{ext} (legacy).
     """
     ext = "jpg" if "jpeg" in content_type or "jpg" in content_type else "png"
     if "webp" in content_type:
         ext = "webp"
     if "heic" in content_type:
         ext = "heic"
-    name = f"{uuid4().hex}.{ext}"
+
+    if transaction_date is not None:
+        mmddyy = transaction_date.strftime("%m%d%y")
+        seq = _next_receipt_number_for_user_date(user, transaction_date)
+        name = f"{user.strip()}-{mmddyy}-{seq:03d}.{ext}"
+    else:
+        name = f"{uuid4().hex}.{ext}"
+
     path = f"{_user_folder(user)}{name}"
 
     client = get_client()
@@ -46,7 +68,6 @@ def upload_image(user: str, file_bytes: bytes, content_type: str) -> str:
         file_bytes,
         file_options={"content-type": content_type},
     )
-    # Public URL
     base = os.environ.get("SUPABASE_URL", "").rstrip("/")
     return f"{base}/storage/v1/object/public/{BUCKET}/{path}"
 
