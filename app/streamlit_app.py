@@ -102,7 +102,7 @@ def _render_user_select():
     st.divider()
 
     chosen = st.selectbox("User", options=USERS, key="auth_user_select", label_visibility="collapsed")
-    if st.button("Continue", type="primary", use_container_width=True):
+    if st.button("Continue", type="primary", width="stretch"):
         st.session_state.current_data_user = chosen
         st.rerun()
 
