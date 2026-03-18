@@ -1,39 +1,33 @@
 """
-Export receipts for print: statement table and/or receipt thumbnails per page.
+Statement PDF export: table (Date, Description, Category, Amount, Receipt).
+Receipt pages are handled by utils.export_receipt when include_receipts=True.
 
 Public API:
-- generate_receipts_pdf(): build PDF to path or buffer (statement, receipts, or both).
+- generate_receipts_pdf(): build PDF (statement only, or statement + receipt pages via export_receipt).
 - transactions_for_month_user(): filter transactions by month and optional user.
 """
 
 from __future__ import annotations
 
 from datetime import date
+from io import BytesIO
 from pathlib import Path
 from typing import TYPE_CHECKING
-
-import sys
 
 if TYPE_CHECKING:
     from reportlab.pdfgen.canvas import Canvas
 
-# Allow running from project root with utils on path
-_ROOT = Path(__file__).resolve().parent.parent
-if str(_ROOT) not in sys.path:
-    sys.path.insert(0, str(_ROOT))
-
 try:
-    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.pagesizes import letter, A4
     from reportlab.lib.units import inch
+    from utils import export_receipt
     from reportlab.pdfgen import canvas
-    from reportlab.lib.utils import ImageReader
-    from PIL import Image
-    from io import BytesIO
-    import urllib.request
 
     HAS_REPORTLAB = True
 except ImportError:
     HAS_REPORTLAB = False
+
+from utils.transaction_utils import receipt_filename_from_url, sort_transactions_chronological
 
 # -----------------------------------------------------------------------------
 # Statement table layout
@@ -55,18 +49,6 @@ _HEADING_TO_TABLE_GAP = 0.2 * inch  # extra gap between heading block and table
 
 _CELL_PAD = 5  # pt from cell edge to text
 _TOTAL_GAP = 22  # pt below table before total line
-
-# -----------------------------------------------------------------------------
-# Receipt thumbnails layout
-# -----------------------------------------------------------------------------
-_RECEIPT_MARGIN = 0.5 * inch
-_RECEIPT_COLS = 2
-_RECEIPT_ROWS = 2
-_RECEIPT_IMG_HEIGHT = 1.8 * inch
-_RECEIPT_LINE_HEIGHT = 0.2 * inch
-_RECEIPT_FONT_SIZE = 8
-_RECEIPT_DESC_MAX_CHARS = 40
-
 
 def _draw_table_cell(
     c: "Canvas",
@@ -96,10 +78,7 @@ def _draw_table_cell(
 
 def _filename_from_receipt_url(url: str) -> str:
     """Derive display filename from receipt_url (last path segment)."""
-    if not url or not url.strip():
-        return "—"
-    path = url.rstrip("/").split("?")[0]  # drop query string
-    segment = path.rstrip("/").split("/")[-1]
+    segment = receipt_filename_from_url(url)
     return segment if segment else "—"
 
 
@@ -238,87 +217,17 @@ def _draw_statement_pages(
             rows_per_page = max(1, int(available_height / _TABLE_ROW_HEIGHT))
 
 
-def _fetch_image_as_reader(url: str) -> ImageReader | None:
-    """Fetch image from URL and return a ReportLab ImageReader, or None on failure."""
-    if not HAS_REPORTLAB or not url:
-        return None
-    try:
-        with urllib.request.urlopen(url, timeout=10) as r:
-            data = r.read()
-        img = Image.open(BytesIO(data))
-        if img.mode in ("RGBA", "P"):
-            img = img.convert("RGB")
-        buf = BytesIO()
-        img.save(buf, format="JPEG", quality=90)
-        buf.seek(0)
-        return ImageReader(buf)
-    except Exception:
-        return None
-
-
-def _draw_receipt_thumbnail(
-    c: "Canvas",
-    t: dict,
-    x: float,
-    y: float,
-    cell_w: float,
-    cell_h: float,
-    currency: str,
-) -> None:
-    """Draw one receipt thumbnail (image + caption) in the given cell."""
-    url = t.get("receipt_url") or ""
-    ir = _fetch_image_as_reader(url) if url else None
-    if ir:
-        try:
-            iw, ih = ir.getSize()
-            scale = min(cell_w / iw, _RECEIPT_IMG_HEIGHT / ih, 1.0)
-            c.drawImage(
-                ir, x, y + cell_h - _RECEIPT_IMG_HEIGHT,
-                width=iw * scale, height=ih * scale,
-            )
-        except Exception:
-            pass
-    text_y = y + cell_h - _RECEIPT_IMG_HEIGHT - _RECEIPT_LINE_HEIGHT
-    c.setFont("Helvetica", _RECEIPT_FONT_SIZE)
-    c.drawString(x, text_y, str(t.get("date", "")))
-    text_y -= _RECEIPT_LINE_HEIGHT
-    c.drawString(x, text_y, f"{t.get('category', '')}  {currency}{float(t.get('amount') or 0):.2f}")
-    text_y -= _RECEIPT_LINE_HEIGHT
-    desc = (t.get("description") or "")[:_RECEIPT_DESC_MAX_CHARS]
-    if desc:
-        c.drawString(x, text_y, desc)
-
-
-def _draw_receipts_section(
-    c: "Canvas",
-    transactions: list[dict],
-    page_size: tuple[float, float],
-    currency: str,
-    receipts_per_page: int = 4,
-) -> None:
-    """Draw receipt thumbnails (2x2 grid per page)."""
-    w, h = page_size
-    margin = _RECEIPT_MARGIN
-    cols, rows = _RECEIPT_COLS, _RECEIPT_ROWS
-    cell_w = (w - 2 * margin) / cols
-    cell_h = (h - 2 * margin) / rows
-
-    for idx, t in enumerate(transactions):
-        if idx > 0 and (idx % receipts_per_page) == 0:
-            c.showPage()
-        row = idx % rows
-        col = (idx // rows) % cols
-        x = margin + col * cell_w
-        y = h - margin - (row + 1) * cell_h
-        _draw_receipt_thumbnail(c, t, x, y, cell_w, cell_h, currency)
+def _sort_chronological(transactions: list[dict]) -> list[dict]:
+    """Return a new list sorted by date ascending, then id (for statement and receipt order)."""
+    return sort_transactions_chronological(transactions)
 
 
 def generate_receipts_pdf(
     transactions: list[dict],
     output_path: str | Path | None = None,
     output_buffer: BytesIO | None = None,
-    receipts_per_page: int = 4,
-    page_size: tuple[float, float] = letter,
+    receipts_per_page: int = 15,
+    page_size: tuple[float, float] | None = None,
     currency: str = "$",
     include_receipts: bool = True,
     include_statement: bool = True,
@@ -326,17 +235,19 @@ def generate_receipts_pdf(
     statement_user_name: str = "",
 ) -> bytes | None:
     """
-    Generate a PDF with optional statement table and/or receipt thumbnails.
+    Generate a PDF with optional statement table and/or receipt pages (receipts via utils.export_receipt).
+
+    Transactions are shown in chronological order (date, then id). Receipt pages use A4, 5×2 layout.
 
     Args:
         transactions: List of dicts with date, user, category, amount, description, receipt_url.
         output_path: Write PDF to this path (mutually exclusive with output_buffer).
         output_buffer: Write PDF bytes here (mutually exclusive with output_path).
-        receipts_per_page: Number of receipt thumbnails per page (e.g. 4 for 2x2).
-        page_size: Page size tuple (width, height) in points.
+        receipts_per_page: Receipt thumbnails per page (default 15 for grid 3 sections × 5 cols).
+        page_size: Page size in points; default letter for statement-only, A4 when receipts included.
         currency: Symbol for amounts (e.g. "$", "¥").
-        include_statement: If True, include statement table (Date, Description, Category, Amount, Receipt).
-        include_receipts: If True, include receipt thumbnail pages after the statement.
+        include_statement: If True, include statement table.
+        include_receipts: If True, include receipt pages (from utils.export_receipt).
         statement_month_label: Heading text e.g. "March 2026".
         statement_user_name: Heading text e.g. "user-1" or "All users".
 
@@ -346,12 +257,14 @@ def generate_receipts_pdf(
     if not HAS_REPORTLAB:
         raise RuntimeError("Install reportlab and Pillow for PDF export: pip install reportlab pillow")
 
+    sorted_tx = _sort_chronological(transactions)
+    effective_page_size = A4 if include_receipts else (page_size or letter)
     dest = output_buffer if output_buffer is not None else str(output_path)
-    c = canvas.Canvas(dest, pagesize=page_size)
+    c = canvas.Canvas(dest, pagesize=effective_page_size)
 
     if include_statement:
         _draw_statement_pages(
-            c, transactions, page_size, currency,
+            c, sorted_tx, effective_page_size, currency,
             month_label=statement_month_label,
             user_name=statement_user_name,
         )
@@ -361,7 +274,13 @@ def generate_receipts_pdf(
         c.showPage()
 
     if include_receipts:
-        _draw_receipts_section(c, transactions, page_size, currency, receipts_per_page)
+        export_receipt.draw_receipt_pages(
+            c,
+            sorted_tx,
+            effective_page_size,
+            receipts_per_page,
+            heading_suffix=statement_month_label,
+        )
 
     c.save()
     return output_buffer.getvalue() if output_buffer is not None else None

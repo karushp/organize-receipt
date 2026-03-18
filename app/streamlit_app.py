@@ -23,7 +23,7 @@ from app.components.capture_form import render_capture_form, SUCCESS_MESSAGE_KEY
 from app.components.transactions_table import render_transactions_table
 from app.components.print_section import render_print_section
 from app.sheets_sync import run_sync as run_sheets_sync
-from utils import pdf_export
+from utils import export_statement, export_receipt
 
 CATEGORIES = load_categories()
 
@@ -204,20 +204,23 @@ def main():
         report_users = USERS
 
     def _make_pdf(rows, include_receipts=True, include_statement=True, month_label="", user_name=""):
+        # When a single user is selected, filter to that user only (defensive for report/receipts)
+        if user_name and user_name != "All users":
+            rows = [r for r in rows if r.get("user") == user_name]
         buf = BytesIO()
-        try:
-            pdf_export.generate_receipts_pdf(
+        if not include_statement and include_receipts:
+            export_receipt.generate_receipts_pdf(rows, output_buffer=buf, heading_suffix=month_label)
+        else:
+            export_statement.generate_receipts_pdf(
                 rows,
                 output_buffer=buf,
-                receipts_per_page=4,
+                receipts_per_page=15,
                 currency=DEFAULT_CURRENCY,
                 include_receipts=include_receipts,
                 include_statement=include_statement,
                 statement_month_label=month_label,
                 statement_user_name=user_name,
             )
-        except TypeError:
-            pdf_export.generate_receipts_pdf(rows, output_buffer=buf, receipts_per_page=4)
         return buf.getvalue()
 
     render_print_section(

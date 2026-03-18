@@ -142,40 +142,47 @@ def render_transactions_table(
         st.info("No receipts recorded yet. Add one above!")
         return
 
-    st.subheader("Transactions")
-
-    col_year, col_month = st.columns(2)
-    with col_year:
-        year_options = _get_year_options(transactions)
-        selected_year = st.selectbox(
-            "Year",
-            options=year_options,
-            format_func=lambda y: str(y),
-            key="transactions_year_filter",
-            help="Filter transactions by year",
-        )
-    by_year = _filter_by_year(transactions, selected_year)
-    month_options = _get_month_options(by_year)
-    with col_month:
-        selected_month = st.selectbox(
-            "Month",
-            options=month_options,
-            format_func=_format_month_option,
-            key="transactions_month_filter",
-            help="Filter transactions by month",
-        )
-
-    filtered = _filter_by_month(by_year, selected_month)
+    filtered = _filter_by_year(transactions, st.session_state.get("transactions_year_filter", ALL_YEARS_KEY))
+    filtered = _filter_by_month(
+        filtered,
+        st.session_state.get("transactions_month_filter", ALL_MONTHS_KEY),
+    )
     filtered = sorted(filtered, key=lambda tx: tx.get("date") or "", reverse=True)
-
-    if not filtered:
-        st.info("No transactions in the selected period.")
-        return
-
-    total = sum(float(tx.get("amount", 0) or 0) for tx in filtered)
     n = len(filtered)
-    st.caption(f"{n} transaction{'s' if n != 1 else ''} · Total: {currency}{total:,.2f}")
+    total = sum(float(tx.get("amount", 0) or 0) for tx in filtered) if filtered else 0
+    summary = f"{n} transaction{'s' if n != 1 else ''} · Total: {currency}{total:,.2f}"
 
-    _render_table_header()
-    for tx in filtered:
-        _render_transaction_row(tx, currency, on_delete)
+    with st.expander("**Transactions** — " + summary, expanded=True):
+        col_year, col_month = st.columns(2)
+        with col_year:
+            year_options = _get_year_options(transactions)
+            selected_year = st.selectbox(
+                "Year",
+                options=year_options,
+                format_func=lambda y: str(y),
+                key="transactions_year_filter",
+                help="Filter transactions by year",
+            )
+        by_year = _filter_by_year(transactions, selected_year)
+        month_options = _get_month_options(by_year)
+        with col_month:
+            selected_month = st.selectbox(
+                "Month",
+                options=month_options,
+                format_func=_format_month_option,
+                key="transactions_month_filter",
+                help="Filter transactions by month",
+            )
+
+        filtered = _filter_by_month(by_year, selected_month)
+        filtered = sorted(filtered, key=lambda tx: tx.get("date") or "", reverse=True)
+
+        if not filtered:
+            st.info("No transactions in the selected period.")
+        else:
+            total = sum(float(tx.get("amount", 0) or 0) for tx in filtered)
+            n = len(filtered)
+            st.caption(f"{n} transaction{'s' if n != 1 else ''} · Total: {currency}{total:,.2f}")
+            _render_table_header()
+            for tx in filtered:
+                _render_transaction_row(tx, currency, on_delete)

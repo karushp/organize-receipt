@@ -1,8 +1,8 @@
 """
-Lightweight receipt pipeline: center crop → grayscale only (no resize).
+Lightweight receipt pipeline: center crop to print-template ratio → grayscale (no resize).
 
-User aligns receipt in frame; app crops a tall center strip (≈1:5 ratio)
-and keeps aspect ratio. No edge detection.
+User aligns receipt in frame; app crops to 171:365 (width:height) so the image
+fits the receipt grid cells when printing. No edge detection.
 """
 
 from __future__ import annotations
@@ -15,17 +15,28 @@ try:
 except ImportError:
     HAS_PIL = False
 
-# Crop: tall center strip, height:width ≈ 5:1, inside frame
-WIDTH_FRACTION = 0.18
-HEIGHT_FRACTION = 0.9
+# Match print template receipt cell ratio (width : height)
+RECEIPT_TEMPLATE_RATIO_W = 171
+RECEIPT_TEMPLATE_RATIO_H = 365
 
 JPEG_QUALITY = 90
 
 
-def _center_crop_box(width: int, height: int) -> tuple[int, int, int, int]:
-    """Return PIL crop box (left, upper, right, lower) for centered strip."""
-    cw = int(width * WIDTH_FRACTION)
-    ch = int(height * HEIGHT_FRACTION)
+def _center_crop_to_ratio(
+    width: int,
+    height: int,
+    ratio_w: int,
+    ratio_h: int,
+) -> tuple[int, int, int, int]:
+    """Return PIL crop box (left, upper, right, lower) for largest centered crop with ratio_w:ratio_h."""
+    # Largest rectangle with ratio_w:ratio_h that fits in (width, height)
+    # Option A: use full height -> cw = H * ratio_w/ratio_h
+    cw_by_h = int(height * ratio_w / ratio_h)
+    if cw_by_h <= width:
+        cw, ch = cw_by_h, height
+    else:
+        ch = int(width * ratio_h / ratio_w)
+        cw = width
     x = (width - cw) // 2
     y = (height - ch) // 2
     return (x, y, x + cw, y + ch)
@@ -33,7 +44,7 @@ def _center_crop_box(width: int, height: int) -> tuple[int, int, int, int]:
 
 def process_receipt(image_bytes: bytes) -> bytes:
     """
-    Crop center rectangle and convert to grayscale. Aspect ratio unchanged.
+    Crop to print-template ratio (171:365) and convert to grayscale.
 
     Returns JPEG bytes. On missing PIL or any error, returns original bytes.
     """
@@ -42,7 +53,10 @@ def process_receipt(image_bytes: bytes) -> bytes:
 
     try:
         img = Image.open(BytesIO(image_bytes)).convert("RGB")
-        box = _center_crop_box(img.width, img.height)
+        box = _center_crop_to_ratio(
+            img.width, img.height,
+            RECEIPT_TEMPLATE_RATIO_W, RECEIPT_TEMPLATE_RATIO_H,
+        )
         cropped = img.crop(box).convert("L")
 
         buf = BytesIO()

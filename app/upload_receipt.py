@@ -66,7 +66,7 @@ def upload_image(
     client.storage.from_(BUCKET).upload(
         path,
         file_bytes,
-        file_options={"content-type": content_type},
+        file_options={"content-type": content_type, "upsert": "true"},
     )
     base = os.environ.get("SUPABASE_URL", "").rstrip("/")
     return f"{base}/storage/v1/object/public/{BUCKET}/{path}"

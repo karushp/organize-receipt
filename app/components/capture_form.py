@@ -98,7 +98,7 @@ def _render_camera_tab() -> None:
         camera_img = st.camera_input(
             "Capture receipt",
             key="receipt_camera",
-            help="Center the receipt in the frame. The app will crop the middle strip.",
+            help="Center the receipt in the frame. The app will crop to the same ratio as the print template.",
         )
         if st.button("Close camera", key="close_camera"):
             st.session_state[SHOW_CAMERA_KEY] = False

@@ -217,7 +217,8 @@ receipt-tracker
 │
 ├── utils
 │   ├── image_processing.py
-│   └── pdf_export.py
+│   ├── export_statement.py
+│   └── export_receipt.py
 │
 ├── config
 │   └── categories.json
