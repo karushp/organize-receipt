@@ -75,23 +75,45 @@ def render_print_section(
         show_user_filter: If True, show User dropdown (for superuser). If False, report is for current_user only.
         current_user: Used when show_user_filter is False.
     """
-    with st.expander("Download Statement", expanded=False):
+    if "print_year" not in st.session_state:
+        st.session_state["print_year"] = date.today().year
+    if "print_month" not in st.session_state:
+        st.session_state["print_month"] = date.today().month
+
+    selected_year = st.session_state.get("print_year")
+    selected_month = st.session_state.get("print_month")
+    try:
+        selected_year = int(selected_year)
+    except (TypeError, ValueError):
+        selected_year = date.today().year
+    try:
+        selected_month = int(selected_month)
+    except (TypeError, ValueError):
+        selected_month = date.today().month
+    if not 1 <= selected_month <= 12:
+        selected_month = date.today().month
+
+    collapsed_label = f"Download Statement ({date(2000, selected_month, 1).strftime('%B %Y')})"
+
+    with st.expander(collapsed_label, expanded=False):
         n_cols = 3 if show_user_filter else 2
         cols = st.columns(n_cols)
 
         with cols[0]:
+            year_options = list(range(_PRINT_YEAR_MIN, _PRINT_YEAR_MAX + 1))
             year = st.selectbox(
                 "Year",
-                options=list(range(_PRINT_YEAR_MIN, _PRINT_YEAR_MAX + 1)),
-                index=min(date.today().year - _PRINT_YEAR_MIN, _PRINT_YEAR_MAX - _PRINT_YEAR_MIN),
+                options=year_options,
+                index=year_options.index(selected_year) if selected_year in year_options else 0,
                 key="print_year",
             )
         with cols[1]:
+            month_options = list(range(1, 13))
             month = st.selectbox(
                 "Month",
-                options=list(range(1, 13)),
+                options=month_options,
                 format_func=lambda m: date(2000, m, 1).strftime("%b"),
-                index=date.today().month - 1,
+                index=(selected_month - 1) if 1 <= selected_month <= 12 else 0,
                 key="print_month",
             )
 

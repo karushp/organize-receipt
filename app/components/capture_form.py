@@ -293,6 +293,7 @@ def render_capture_form(
     categories: list[str],
     on_submit,
     current_user: str,
+    on_sync_google_sheets=None,
 ) -> None:
     """
     Render the Add Receipt section: image source tabs, preview, and transaction form.
@@ -301,6 +302,23 @@ def render_capture_form(
     on_submit(transaction_dict, image_bytes, filename) where image_bytes/filename may be None if bypass receipt.
     """
     st.subheader("Add Receipt")
+
+    _, action_col = st.columns([3, 1])
+    with action_col:
+        if st.button(
+            "Sync to Google Sheets",
+            key="sync_sheets_add_receipt",
+            help="Push Supabase transactions to your Google Sheet",
+            width="stretch",
+        ):
+            if on_sync_google_sheets is None:
+                st.error("Google Sheets sync is not configured.")
+            else:
+                ok, msg = on_sync_google_sheets()
+                if ok:
+                    st.success(msg)
+                else:
+                    st.error(msg)
 
     tab_photo, tab_upload = st.tabs(["📷 Take Photo", "📁 Upload File"])
     with tab_photo:

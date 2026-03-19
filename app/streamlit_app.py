@@ -139,6 +139,13 @@ def main():
     st.title(f'Receipt Tracker: **{selected_user}**')
     st.caption("Record expenses and store receipt images in Supabase. Sync to Google Sheets when needed.")
 
+    if "load_full_history" not in st.session_state:
+        st.session_state.load_full_history = False
+
+    def _sync_google_sheets():
+        with st.spinner("Syncing..."):
+            return run_sheets_sync()
+
     with st.sidebar:
         st.caption(f"Adding as **{selected_user}**")
         can_switch = not auth_enabled() or is_super_user(st.session_state.auth_user or "")
@@ -147,13 +154,6 @@ def main():
                 st.session_state.current_data_user = None
                 st.rerun()
         st.divider()
-        if st.button("Sync to Google Sheets", key="sync_sheets", help="Push Supabase transactions to your Google Sheet"):
-            with st.spinner("Syncing…"):
-                ok, msg = run_sheets_sync()
-                if ok:
-                    st.success(msg)
-                else:
-                    st.error(msg)
         if auth_enabled():
             st.divider()
             st.caption(f"Logged in as **{st.session_state.auth_user}**")
@@ -170,18 +170,43 @@ def main():
         categories=CATEGORIES,
         on_submit=_handle_submit,
         current_user=selected_user,
+        on_sync_google_sheets=_sync_google_sheets,
     )
     st.divider()
 
     # Regular users only see their own transactions; super users see all
     auth_user = st.session_state.auth_user or ""
     only_my_data = auth_enabled() and not is_super_user(auth_user)
+    current_month = date.today().replace(day=1)
+
+    with st.container():
+        left, right = st.columns([3, 1])
+        with left:
+            if st.session_state.load_full_history:
+                st.caption("Showing full transaction history.")
+            else:
+                st.caption(f"Showing current month by default ({current_month.strftime('%B %Y')}) for faster initial load.")
+        with right:
+            if st.session_state.load_full_history:
+                if st.button("Use fast month view", key="use_fast_month_view", width="stretch"):
+                    st.session_state.load_full_history = False
+                    st.rerun()
+            else:
+                if st.button("Load full history", key="load_full_history_btn", width="stretch"):
+                    st.session_state.load_full_history = True
+                    st.rerun()
 
     try:
-        if only_my_data:
-            all_tx = transactions.get_transactions_filtered(user=selected_user)
+        if st.session_state.load_full_history:
+            if only_my_data:
+                all_tx = transactions.get_transactions_filtered(user=selected_user)
+            else:
+                all_tx = transactions.get_all_transactions()
         else:
-            all_tx = transactions.get_all_transactions()
+            if only_my_data:
+                all_tx = transactions.get_transactions_filtered(month=current_month, user=selected_user)
+            else:
+                all_tx = transactions.get_transactions_filtered(month=current_month)
     except httpx.ConnectError as e:
         st.error(
             "**Cannot reach Supabase.** Check that `SUPABASE_URL` in `.env` is correct "

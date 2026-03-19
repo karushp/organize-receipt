@@ -7,7 +7,7 @@ transactions with columns: Date, Description, Category, Amount, receipt link, de
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, date
 from typing import Callable
 
 import streamlit as st
@@ -70,6 +70,15 @@ def _format_month_option(value: str) -> str:
         return datetime.strptime(value + "-01", "%Y-%m-%d").strftime("%b %Y")
     except ValueError:
         return value
+
+
+def _month_label_for_header(selection: str) -> str:
+    if selection == ALL_MONTHS_KEY:
+        return "All months"
+    try:
+        return datetime.strptime(selection + "-01", "%Y-%m-%d").strftime("%B %Y")
+    except ValueError:
+        return selection
 
 
 def _filter_by_month(transactions: list[dict], selection: str) -> list[dict]:
@@ -142,6 +151,24 @@ def render_transactions_table(
         st.info("No receipts recorded yet. Add one above!")
         return
 
+    # Initialize filters to current period on first load.
+    today = date.today()
+    current_year = today.year
+    current_month_key = today.strftime("%Y-%m")
+
+    year_options = _get_year_options(transactions)
+    if "transactions_year_filter" not in st.session_state:
+        st.session_state["transactions_year_filter"] = (
+            current_year if current_year in year_options else ALL_YEARS_KEY
+        )
+
+    by_year_for_default = _filter_by_year(transactions, st.session_state["transactions_year_filter"])
+    month_options_for_default = _get_month_options(by_year_for_default)
+    if "transactions_month_filter" not in st.session_state:
+        st.session_state["transactions_month_filter"] = (
+            current_month_key if current_month_key in month_options_for_default else ALL_MONTHS_KEY
+        )
+
     filtered = _filter_by_year(transactions, st.session_state.get("transactions_year_filter", ALL_YEARS_KEY))
     filtered = _filter_by_month(
         filtered,
@@ -151,8 +178,10 @@ def render_transactions_table(
     n = len(filtered)
     total = sum(float(tx.get("amount", 0) or 0) for tx in filtered) if filtered else 0
     summary = f"{n} transaction{'s' if n != 1 else ''} · Total: {currency}{total:,.2f}"
+    selected_month_for_header = st.session_state.get("transactions_month_filter", ALL_MONTHS_KEY)
+    month_header = _month_label_for_header(selected_month_for_header)
 
-    with st.expander("**Transactions** — " + summary, expanded=True):
+    with st.expander(f"**Transactions ({month_header})** — {summary}", expanded=False):
         col_year, col_month = st.columns(2)
         with col_year:
             year_options = _get_year_options(transactions)
