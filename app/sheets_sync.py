@@ -2,6 +2,7 @@
 Push Supabase transactions to Google Sheets (one tab per user).
 Used by scripts/sync_to_sheets.py and the Streamlit app "Sync to Sheets" button.
 """
+import json
 import os
 from pathlib import Path
 
@@ -22,23 +23,38 @@ def _get_sheets_client():
 
     from app.config import ROOT
     raw = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON", "").strip()
-    # Try absolute/user path first, then relative to project root
-    for candidate in [
-        (Path(raw).expanduser() if raw else None),
-        (ROOT / raw) if raw else (ROOT / "private" / "credentials.json"),
-    ]:
-        if candidate and candidate.is_file():
-            creds_path = str(candidate.resolve())
-            break
-    else:
-        raise RuntimeError(
-            "Set GOOGLE_SERVICE_ACCOUNT_JSON in .env to the path of your service account JSON file."
-        )
     scope = [
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive",
     ]
-    creds = Credentials.from_service_account_file(creds_path, scopes=scope)
+
+    # GOOGLE_SERVICE_ACCOUNT_JSON can be either:
+    # - a file path (absolute or relative to project root)
+    # - the JSON content (useful on hosted deployments where files aren't present)
+    creds = None
+    if raw.startswith("{"):
+        try:
+            info = json.loads(raw)
+            creds = Credentials.from_service_account_info(info, scopes=scope)
+        except Exception:
+            creds = None
+    elif raw:
+        # Try absolute/user path first, then relative to project root
+        for candidate in [Path(raw).expanduser(), ROOT / raw]:
+            if candidate.is_file():
+                creds = Credentials.from_service_account_file(str(candidate.resolve()), scopes=scope)
+                break
+
+    if creds is None:
+        default_path = ROOT / "private" / "credentials.json"
+        if default_path.is_file():
+            creds = Credentials.from_service_account_file(str(default_path.resolve()), scopes=scope)
+
+    if creds is None:
+        raise RuntimeError(
+            "Set GOOGLE_SERVICE_ACCOUNT_JSON to either (1) a path to your service account JSON file "
+            "or (2) the JSON content itself (recommended for hosted deployments)."
+        )
     return gspread.authorize(creds)
 
 
