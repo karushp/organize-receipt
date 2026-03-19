@@ -287,6 +287,61 @@ Generate downloadable reports for accounting.
 
 ---
 
+## Image Capture → Storage → Print (Process Map)
+
+This describes the implemented end-to-end pipeline for receipt images: how images are captured, processed, stored, and printed/exported.
+
+```mermaid
+flowchart TD
+  A[User on phone/desktop] --> B[Streamlit UI]
+  B --> C{Add Receipt}
+  C -->|📷 Take Photo| D[st.camera_input]
+  C -->|📁 Upload File| E[st.file_uploader]
+  D --> F[raw bytes]
+  E --> F[raw bytes]
+
+  F --> G[Process image<br/>center-crop to 171:365 + grayscale + JPEG]
+  G --> H[Preview + form fields (session state)]
+  H --> I{Save Receipt}
+  I -->|Save without receipt| J[Insert DB row only]
+  I -->|With receipt image| K[Upload to Storage + insert DB row]
+
+  K --> L[Supabase Storage: receipts/<user>/...]
+  K --> M[Supabase Postgres: transactions]
+  J --> M
+
+  M --> O[Download Statement (month + optional user)]
+  O --> P{Generate PDFs}
+  P -->|Statement only| Q[Statement table PDF]
+  P -->|Statement + receipts| R[Statement table + receipt grid pages]
+  P -->|Receipts only| S[Receipt grid pages]
+
+  R --> T[Fetch images by public receipt_url during PDF generation]
+  S --> T
+  T --> U[Draw into fixed A4 grid cells (cover-fit + clip)]
+```
+
+### Where this happens in code (entrypoints)
+
+- **Capture UI**: `app/components/capture_form.py`
+  - Camera capture: `st.camera_input(...)`
+  - File upload: `st.file_uploader(...)`
+  - Preview is stored as “pending receipt” in Streamlit `session_state`.
+- **Receipt image processing**: `utils/receipt_scanner.py`
+  - `scan_receipt_image_bytes()` → `process_receipt()`
+  - Behavior: center-crop to the print-template ratio **171:365 (W:H)**, convert to grayscale, output JPEG bytes (quality ~90). No edge detection.
+- **Upload + DB insert**: `app/upload_receipt.py`
+  - Upload path format (when date is set): `receipts/{user}/{user}-{MMDDYY}-{seq:03d}.{ext}`
+  - DB insert into `transactions` includes `receipt_url` (or `None` when “save without receipt” is checked).
+- **Print/export UI**: `app/components/print_section.py`
+  - Generates 3 variants: statement only, statement + receipts, receipts only.
+- **Statement PDF**: `utils/export_statement.py`
+  - Draws a paginated table (Date, Description, Category, Amount, Receipt filename).
+- **Receipt grid PDF pages**: `utils/export_receipt.py` + `utils/receipt_grid.py`
+  - Filters to transactions with a `receipt_url`, fetches images from the URL at export time, and draws them into fixed A4 grid cells using cover-fit + clipping.
+
+---
+
 # Advantages of This Architecture
 
 - No Google Drive permission issues
