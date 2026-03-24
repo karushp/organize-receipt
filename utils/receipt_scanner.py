@@ -1,8 +1,8 @@
 """
-Lightweight receipt pipeline: center crop to print-template ratio → grayscale (no resize).
+Lightweight receipt pipeline: center crop to print-template ratio (no resize).
 
 User aligns receipt in frame; app crops to 171:365 (width:height) so the image
-fits the receipt grid cells when printing. No edge detection.
+fits the receipt grid cells when printing. Color is preserved. No edge detection.
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ except ImportError:
 RECEIPT_TEMPLATE_RATIO_W = 171
 RECEIPT_TEMPLATE_RATIO_H = 365
 
-JPEG_QUALITY = 90
+JPEG_QUALITY = 100
 
 
 def _center_crop_to_ratio(
@@ -44,7 +44,7 @@ def _center_crop_to_ratio(
 
 def process_receipt(image_bytes: bytes) -> bytes:
     """
-    Crop to print-template ratio (171:365) and convert to grayscale.
+    Crop to print-template ratio (171:365), keep RGB, encode as JPEG.
 
     Returns JPEG bytes. On missing PIL or any error, returns original bytes.
     """
@@ -57,7 +57,7 @@ def process_receipt(image_bytes: bytes) -> bytes:
             img.width, img.height,
             RECEIPT_TEMPLATE_RATIO_W, RECEIPT_TEMPLATE_RATIO_H,
         )
-        cropped = img.crop(box).convert("L")
+        cropped = img.crop(box)
 
         buf = BytesIO()
         cropped.save(buf, format="JPEG", quality=JPEG_QUALITY)

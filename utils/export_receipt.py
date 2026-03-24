@@ -75,7 +75,7 @@ def _fetch_image_as_reader(url: str) -> ImageReader | None:
         if img.mode in ("RGBA", "P"):
             img = img.convert("RGB")
         buf = BytesIO()
-        img.save(buf, format="JPEG", quality=90)
+        img.save(buf, format="JPEG", quality=100)
         buf.seek(0)
         return ImageReader(buf)
     except Exception:
